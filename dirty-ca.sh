@@ -133,6 +133,48 @@ gen_intermediate_crl() {
     -out $INTERMEDIATE_CA_CRL_DIR/crl.pem
 }
 
+init_leaf_certificate() {
+  echo 'Preparing to create leaf private key...'
+  echo '  1) RSA'
+  echo '  2) ECDSA'
+  read -rp 'Choose: ' leaf_algo
+
+  if [ "$leaf_algo" -eq 1 ]; then
+    openssl genrsa -out $INTERMEDIATE_CA_PRIVATE_DIR/leaf-key.pem
+  else
+    openssl ecparam -out $INTERMEDIATE_CA_PRIVATE_DIR/leaf-key.pem -name secp384r1 -genkey
+  fi
+
+  echo 'Choosing a certificate profile...'
+  echo '  1) client'
+  echo '  2) server'
+  read -rp 'Choose: ' cert_profile
+
+  if [ "$cert_profile" -eq 1 ]; then
+    CERT_EXT="usr_cert"
+  else
+    CERT_EXT="server_cert"
+  fi
+
+  openssl req -config ./intermediate.cnf \
+    -key $INTERMEDIATE_CA_PRIVATE_DIR/leaf-key.pem \
+    -new \
+    -sha256 \
+    -out $INTERMEDIATE_CA_CSR_DIR/leaf-csr.pem
+
+  openssl ca -config intermediate.cnf \
+    -in $INTERMEDIATE_CA_CSR_DIR/leaf-csr.pem \
+    -extensions $CERT_EXT \
+    -notext \
+    -md sha256 \
+    -out $INTERMEDIATE_CA_CERTS_DIR/leaf.pem
+
+  LEAF_CN=$(openssl x509 -in $INTERMEDIATE_CA_CERTS_DIR/leaf.pem -noout -subject | awk -v FS="(CN = |emailAddress)" '{print $2}' | sed 's/,//g' | sed 's/ //g')
+  mv $INTERMEDIATE_CA_PRIVATE_DIR/leaf-key.pem "$INTERMEDIATE_CA_PRIVATE_DIR/$LEAF_CN-key.pem"
+  mv $INTERMEDIATE_CA_CSR_DIR/leaf-csr.pem "$INTERMEDIATE_CA_CSR_DIR/$LEAF_CN-csr.pem"
+  mv $INTERMEDIATE_CA_CERTS_DIR/leaf.pem "$INTERMEDIATE_CA_CERTS_DIR/$LEAF_CN.pem"
+}
+
 init() {
   init_ca_dir
   init_root_ca
@@ -150,9 +192,10 @@ echo_help() {
   echo '  -i  Initialize CA (create root and intermediate pairs)'
   echo '  -D  Cleanup existing hacky CA (contents of the ./ca directory)'
   echo '  -c  Create new CRLs for both the root and intermediate CA (check ca/*/crl)'
+  echo '  -L  Create a leaf certificate with the already existing CA (Run w/ -i first!)'
 }
 
-while getopts ':hiDc' option; do
+while getopts ':hiDcL' option; do
   case "$option" in
     h) echo_help
        exit
@@ -165,6 +208,9 @@ while getopts ':hiDc' option; do
        exit
        ;;
     D) delete_ca
+       exit
+       ;;
+    L) init_leaf_certificate
        exit
        ;;
     *) printf "illegal option: -%s\n" "$OPTARG" >&2
