@@ -4,6 +4,10 @@ An OpenSSL CA hacky enough that I can use it for various testing.
 
 **NOTE: This is meant for test purposes only. Don't run any domain you care about off it**
 
+## Requirements
+
+I've been running this off of OpenSSL 1.1.1d for the time being. I expect any OpenSSL 1.1.x version would work just fine but I'm not too sure about 1.0.x.
+
 ## Usage
 
 1. Create a root and intermediate CA with the provided [init.sh](init.sh)
