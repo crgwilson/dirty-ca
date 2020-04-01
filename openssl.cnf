@@ -1,0 +1,48 @@
+[ req ]
+default_bits       = 4096
+default_md         = sha284
+prompt             = yes
+encrypt_key        = no
+utf8               = yes
+string_mask        = utf8only
+distinguished_name = req_dn
+
+[ req_dn ]
+# See <https://en.wikipedia.org/wiki/Certificate_signing_request>.
+countryName                     = Country Name (2 letter code)
+stateOrProvinceName             = State or Province Name
+localityName                    = Locality Name
+0.organizationName              = Organization Name
+organizationalUnitName          = Organizational Unit Name
+commonName                      = Common Name
+emailAddress                    = Email Address
+
+# Optionally, specify some defaults.
+countryName_default             = US
+stateOrProvinceName_default     = MD
+localityName_default            = Frederick
+0.organizationName_default      = Garbage Day Inc.
+organizationalUnitName_default  = Infrastructure
+
+
+[ client_ext ]
+# Extensions for client certificates (`man x509v3_config`).
+basicConstraints = CA:FALSE
+nsCertType       = client, email
+keyUsage         = critical, nonRepudiation, digitalSignature, keyEncipherment
+extendedKeyUsage = clientAuth, emailProtection
+
+
+[ server_ext ]
+# Extensions for server certificates (`man x509v3_config`).
+basicConstraints = CA:FALSE
+nsCertType       = server
+keyUsage         = critical, digitalSignature, keyEncipherment
+extendedKeyUsage = serverAuth
+
+
+[ ocsp_ext ]
+# Extensions for OCSP signing certificates (`man ocsp`).
+basicConstraints = CA:FALSE
+keyUsage         = critical, digitalSignature
+extendedKeyUsage = critical, OCSPSigning

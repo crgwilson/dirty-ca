@@ -1,0 +1,168 @@
+# OpenSSL intermediate CA configuration file.
+
+[ default ]
+ca       = intermediate
+dir      = $ca
+base_url = http://pki.garbage-day.dev
+aia_url  = $base_url/$ca.pem
+crl_url  = $base_url/$ca.crl
+ocsp_url = http://ocsp.garbage-day.dev/$ca
+
+
+[ req ]
+# Options for the `req` sub-command (`man req`)
+default_bits       = 4096
+default_md         = sha384
+prompt             = no
+encrypt_key        = no
+utf8               = yes
+string_mask        = utf8only
+distinguished_name = intermediate_ca_dn
+x509_extensions    = intermediate_ca_ext
+
+
+[ ca ]
+# Options for the `ca` sub-command (`man ca`)
+default_ca = intermediate_ca
+
+
+[ intermediate_ca_dn ]
+# See https://en.wikipedia.org/wiki/Certificate_signing_request
+countryName            = US
+stateOrProvinceName    = MD
+localityName           = Frederick
+0.organizationName     = Garbage Day Inc.
+organizationalUnitName = Infrastructure
+commonName             = intermediate.garbage-day.dev
+emailAddress           = admin@garbage-day.dev
+
+
+[ intermediate_ca ]
+# Directory and file locations.
+certs             = $dir/certs
+new_certs_dir     = $dir/newcerts
+crl_dir           = $dir/crl
+
+# The intermediate key and certificate
+certificate       = $dir/certs/intermediate.pem
+private_key       = $dir/private/intermediate-key.pem
+
+serial            = $dir/serial
+database          = $dir/index.txt
+RANDFILE          = $dir/private/.rand
+
+# For certificate revocation lists.
+crlnumber         = $dir/crlnumber
+crl               = $dir/crl/crl.pem
+crl_extensions    = crl_ext
+default_crl_days  = 30
+
+default_md        = sha384
+name_opt          = ca_default
+cert_opt          = ca_default
+default_days      = 365
+preserve          = no
+policy            = policy_loose
+
+
+[ policy_strict ]
+# The root CA should only sign intermediate certificates that match.
+# See the POLICY FORMAT section of `man ca`.
+countryName             = match
+stateOrProvinceName     = match
+organizationName        = match
+organizationalUnitName  = optional
+commonName              = supplied
+emailAddress            = optional
+
+
+[ policy_loose ]
+# Allow the intermediate CA to sign a more diverse range of certificates.
+# See the POLICY FORMAT section of the `ca` man page.
+countryName             = optional
+stateOrProvinceName     = optional
+localityName            = optional
+organizationName        = optional
+organizationalUnitName  = optional
+commonName              = supplied
+emailAddress            = optional
+
+
+[ req_distinguished_name ]
+# See https://en.wikipedia.org/wiki/Certificate_signing_request
+countryName                     = Country Name (2 letter code)
+stateOrProvinceName             = State or Province Name
+localityName                    = Locality Name
+0.organizationName              = Organization Name
+organizationalUnitName          = Organizational Unit Name
+commonName                      = Common Name
+emailAddress                    = Email Address
+
+# Optionally, specify some defaults.
+countryName_default             = US
+stateOrProvinceName_default     = MD
+localityName_default            = Frederick
+0.organizationName_default      = Garbage Day Inc.
+organizationalUnitName_default  = Infrastructure
+emailAddress_default            = admin@garbage-day.dev
+
+
+[ issuer_info ]
+caIssuers;URI.0 = $aia_url
+
+
+[ crl_ext ]
+# Extension for CRLs (`man x509v3_config`).
+authorityKeyIdentifier = keyid:always
+authorityInfoAccess    = @issuer_info
+
+
+[ crl_info ]
+# CRL distribution points
+URI.0 = $crl_url
+
+
+[ intermediate_ca_ext ]
+# Extensions for a typical intermediate CA (`man x509v3_config`).
+subjectKeyIdentifier   = hash
+authorityKeyIdentifier = keyid:always,issuer
+basicConstraints       = critical, CA:true, pathlen:0
+keyUsage               = critical, digitalSignature, cRLSign, keyCertSign
+crlDistributionPoints  = @crl_info
+
+
+[ client_ext ]
+# Extensions for client certificates (`man x509v3_config`).
+basicConstraints       = CA:FALSE
+nsCertType             = client, email
+nsComment              = "OpenSSL Generated Client Certificate"
+subjectKeyIdentifier   = hash
+authorityKeyIdentifier = keyid,issuer
+keyUsage               = critical, nonRepudiation, digitalSignature, keyEncipherment
+extendedKeyUsage       = clientAuth, emailProtection
+crlDistributionPoints  = @crl_info
+authorityInfoAccess    = OCSP;URI:$ocsp_url
+
+
+[ server_ext ]
+# Extensions for server certificates (`man x509v3_config`).
+basicConstraints       = CA:FALSE
+nsCertType             = server
+nsComment              = "OpenSSL Generated Server Certificate"
+subjectKeyIdentifier   = hash
+authorityKeyIdentifier = keyid,issuer:always
+keyUsage               = critical, digitalSignature, keyEncipherment
+extendedKeyUsage       = serverAuth
+crlDistributionPoints  = @crl_info
+authorityInfoAccess    = OCSP;URI:$ocsp_url
+
+
+[ ocsp_ext ]
+# Extension for OCSP signing certificates (`man ocsp`).
+basicConstraints       = CA:FALSE
+subjectKeyIdentifier   = hash
+authorityKeyIdentifier = keyid,issuer
+keyUsage               = critical, digitalSignature
+extendedKeyUsage       = critical, OCSPSigning
+crlDistributionPoints  = @crl_info
+authorityInfoAccess    = @issuer_info
